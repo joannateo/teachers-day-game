@@ -1,0 +1,1360 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Connect the Dots: One Line</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Space+Grotesk:wght@400;500;600&display=swap');
+
+  *{ box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+  html,body{ min-height:100%; }
+  html{ overflow-x:hidden; }
+  body{
+    font-family:'Space Grotesk', sans-serif;
+    background:
+      radial-gradient(circle at 15% 8%, rgba(224,160,90,0.12), transparent 42%),
+      radial-gradient(circle at 85% 92%, rgba(34,57,44,0.07), transparent 45%),
+      #f4ede2;
+    color:#22392c;
+    min-height:100%;
+    width:100%;
+    overflow-x:hidden;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding:28px 18px 40px;
+  }
+
+  #app{
+    width:100%;
+    max-width:440px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+  }
+
+  @media (min-width:640px){
+    body{ padding:56px 24px; }
+    #app{
+      background:#fffaf1;
+      border-radius:28px;
+      box-shadow:0 40px 90px rgba(34,57,44,0.16), 0 2px 10px rgba(34,57,44,0.05);
+      padding:48px 52px 44px;
+      border:1px solid rgba(34,57,44,0.06);
+    }
+  }
+
+  header{ text-align:center; margin-bottom:6px; }
+  .kicker{
+    font-size:13px;
+    letter-spacing:4px;
+    text-transform:uppercase;
+    color:#c98a4b;
+    font-weight:500;
+    margin-top:10px;
+  }
+  h1{
+    font-family:'Fraunces', serif;
+    font-weight:700;
+    font-size:clamp(34px,9vw,48px);
+    line-height:1.1;
+  }
+  .sub{
+    font-size:14px;
+    color:#5c6b5e;
+    margin-top:6px;
+    font-weight:400;
+  }
+  .v1-link{
+    display:inline-block;
+    margin-top:12px;
+    font-size:12.5px;
+    color:#c15a3e;
+    text-decoration:underline;
+  }
+
+  .progress{
+    display:flex;
+    gap:8px;
+    margin:18px 0 10px;
+  }
+  .progress .step{
+    width:10px; height:10px;
+    border-radius:50%;
+    background:rgba(34,57,44,0.18);
+  }
+  .progress .step.done{ background:#c15a3e; }
+  .progress .step.active{ background:#22392c; }
+
+  .board-wrap{
+    width:100%;
+    max-width:420px;
+  }
+
+  #boardStage{
+    position:relative;
+    width:100%;
+  }
+
+  #board{
+    width:100%;
+    aspect-ratio:1/1;
+    background:#fffaf1;
+    border:1.5px solid rgba(34,57,44,0.18);
+    border-radius:18px;
+    display:block;
+    touch-action:none;
+    box-shadow:0 14px 34px rgba(34,57,44,0.12);
+  }
+
+  .dot{
+    position:absolute;
+    pointer-events:none;
+    transform:translate(-50%,-50%);
+    width:18px; height:18px;
+    border-radius:50%;
+    background:#f4ede2;
+    border:2px solid rgba(34,57,44,0.45);
+    transition:background .2s ease, border-color .2s ease, opacity .2s ease, transform .15s ease;
+  }
+  .dot.current{
+    background:#c15a3e;
+    border-color:#c15a3e;
+    animation:pulse 1.1s infinite;
+  }
+  @keyframes pulse{
+    0%,100%{ box-shadow:0 0 0 0 rgba(193,90,62,0.4); }
+    50%{ box-shadow:0 0 0 8px rgba(193,90,62,0); }
+  }
+  .dot.dead{
+    background:rgba(34,57,44,0.12);
+    border-color:rgba(34,57,44,0.2);
+  }
+  .dot.invalid{
+    animation:shake .32s ease;
+    border-color:#b23b3b;
+  }
+  @keyframes shake{
+    0%,100%{ transform:translate(-50%,-50%); }
+    25%{ transform:translate(calc(-50% - 4px),-50%); }
+    75%{ transform:translate(calc(-50% + 4px),-50%); }
+  }
+
+  .overlay{
+    width:100%;
+    min-height:360px;
+    background:rgba(34,57,44,0.94);
+    border-radius:18px;
+    display:none;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    padding:34px 26px;
+    color:#f4ede2;
+    position:relative;
+  }
+  .overlay.show{ display:flex; }
+  .overlay-inner{
+    width:100%;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+  }
+  .overlay h2{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:clamp(22px,6vw,28px);
+    margin-bottom:14px;
+  }
+  .overlay p.quote{
+    font-family:'Fraunces', serif;
+    font-style:italic;
+    font-size:18px;
+    line-height:1.6;
+    color:#e0a05a;
+    max-width:300px;
+    margin-bottom:22px;
+  }
+  .overlay p.lead{
+    font-size:14.5px;
+    line-height:1.7;
+    color:rgba(244,237,226,0.9);
+    max-width:320px;
+    margin-bottom:20px;
+  }
+  .overlay p.lead:last-of-type{ margin-bottom:24px; }
+
+  .back-link{
+    position:absolute;
+    top:18px;
+    left:20px;
+    background:none;
+    border:none;
+    font-family:inherit;
+    font-size:12.5px;
+    color:rgba(244,237,226,0.55);
+    cursor:pointer;
+    padding:4px 2px;
+  }
+  .back-link:active{ color:rgba(244,237,226,0.85); }
+
+  button{
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:500;
+    font-size:15px;
+    color:#22392c;
+    background:#f4ede2;
+    border:none;
+    padding:12px 28px;
+    border-radius:26px;
+    cursor:pointer;
+  }
+  button:active{ transform:scale(0.97); }
+  button:disabled{
+    opacity:0.4;
+    cursor:not-allowed;
+  }
+  button:disabled:active{ transform:none; }
+
+  input[type=text]{
+    font-family:'Space Grotesk', sans-serif;
+    font-size:15px;
+    padding:12px 16px;
+    border-radius:24px;
+    border:1px solid rgba(244,237,226,0.4);
+    background:rgba(244,237,226,0.08);
+    color:#f4ede2;
+    width:100%;
+    max-width:260px;
+    margin-bottom:16px;
+    text-align:center;
+  }
+  input[type=text]::placeholder{ color:rgba(244,237,226,0.45); }
+  input[type=text]:focus{ outline:none; border-color:#e0a05a; }
+
+  .check-row{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    font-size:12.5px;
+    color:rgba(244,237,226,0.7);
+    margin:-6px 0 20px;
+    cursor:pointer;
+  }
+  .check-row input[type=checkbox]{
+    width:16px;
+    height:16px;
+    accent-color:#e0a05a;
+    cursor:pointer;
+  }
+
+  .overlay a{ color:#e0a05a; text-decoration:underline; }
+
+  .choice-list{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    width:100%;
+    max-width:320px;
+    margin-top:4px;
+  }
+  .choice-btn{
+    width:100%;
+    background:rgba(244,237,226,0.07);
+    border:1px solid rgba(244,237,226,0.3);
+    color:#f4ede2;
+    padding:15px 18px;
+    border-radius:14px;
+    font-size:14.5px;
+    line-height:1.4;
+    text-align:left;
+    font-weight:500;
+  }
+  .choice-btn:active{ background:rgba(244,237,226,0.16); }
+
+  .share-block{
+    margin-top:18px;
+    padding-top:18px;
+    border-top:1px solid rgba(244,237,226,0.25);
+    width:100%;
+    max-width:320px;
+  }
+  .share-note{
+    font-size:12.5px;
+    line-height:1.6;
+    color:rgba(244,237,226,0.75);
+    margin-bottom:14px;
+  }
+  .share-note p{ margin:0 0 10px; }
+  .share-note p:last-child{ margin-bottom:0; }
+  .share-hint{
+    font-size:11.5px;
+    line-height:1.5;
+    color:rgba(244,237,226,0.55);
+    text-align:center;
+    margin-top:8px;
+  }
+  .tip-callout{
+    display:flex;
+    align-items:flex-start;
+    gap:8px;
+    background:rgba(224,160,90,0.14);
+    border:1px solid rgba(224,160,90,0.4);
+    border-left:3px solid #e0a05a;
+    border-radius:10px;
+    padding:11px 13px;
+    margin:10px 0 18px;
+    font-size:12.5px;
+    line-height:1.55;
+    color:#f4ede2;
+    text-align:left;
+  }
+  .tip-callout strong{
+    color:#e0a05a;
+    font-weight:600;
+  }
+  .share-label{
+    font-size:11px;
+    letter-spacing:1.5px;
+    text-transform:uppercase;
+    color:rgba(244,237,226,0.55);
+    text-align:left;
+    margin-bottom:6px;
+  }
+  .caption-box{
+    background:rgba(244,237,226,0.08);
+    border:1px solid rgba(244,237,226,0.25);
+    border-radius:12px;
+    padding:12px 14px;
+    font-size:12.5px;
+    line-height:1.6;
+    color:rgba(244,237,226,0.9);
+    text-align:left;
+    margin-bottom:10px;
+    white-space:pre-wrap;
+    word-wrap:break-word;
+    overflow-wrap:break-word;
+  }
+  .copy-btn{
+    width:100%;
+    background:rgba(244,237,226,0.12);
+    color:#f4ede2;
+    border:1px solid rgba(244,237,226,0.35);
+    font-size:13.5px;
+    padding:10px;
+    margin-bottom:18px;
+  }
+  .collage-preview{
+    width:100%;
+    border-radius:12px;
+    border:1px solid rgba(244,237,226,0.25);
+    margin-bottom:10px;
+    display:block;
+  }
+  .save-btn{
+    width:100%;
+    background:rgba(244,237,226,0.12);
+    color:#f4ede2;
+    border:1px solid rgba(244,237,226,0.35);
+    font-size:13.5px;
+    font-family:inherit;
+    padding:10px;
+    margin-bottom:18px;
+    text-decoration:none;
+    display:block;
+    text-align:center;
+    cursor:pointer;
+  }
+  .share-btn{
+    background:#e0a05a;
+    color:#22392c;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    width:100%;
+    font-weight:600;
+  }
+  .share-btn svg{ width:17px; height:17px; color:#22392c; }
+  .replay-row{
+    display:flex;
+    gap:10px;
+    margin-top:18px;
+  }
+  .replay-btn{
+    flex:1;
+    background:transparent;
+    border:1px solid rgba(244,237,226,0.35);
+    color:rgba(244,237,226,0.85);
+    font-size:12.5px;
+    padding:10px;
+    text-align:center;
+    text-decoration:none;
+    display:block;
+  }
+  .toast{
+    position:fixed;
+    bottom:24px;
+    left:50%;
+    transform:translateX(-50%);
+    background:#22392c;
+    color:#f4ede2;
+    font-size:12.5px;
+    padding:9px 16px;
+    border-radius:20px;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .25s ease;
+    white-space:nowrap;
+    max-width:90%;
+    text-align:center;
+    z-index:10;
+  }
+  .toast.show{ opacity:1; }
+
+  .hint{
+    margin-top:16px;
+    font-size:13px;
+    color:#7a7264;
+    text-align:center;
+    max-width:360px;
+  }
+  .hint.stuck{ color:#b23b3b; font-weight:500; }
+
+  .reset-btn{
+    margin-top:12px;
+    background:transparent;
+    border:1px solid rgba(34,57,44,0.3);
+    color:#5c6b5e;
+    font-size:12.5px;
+    padding:8px 20px;
+  }
+
+  footer{
+    margin-top:24px;
+    font-size:11px;
+    letter-spacing:2px;
+    text-transform:uppercase;
+    color:#a99f8e;
+    text-align:center;
+  }
+  footer a{ color:#a99f8e; text-decoration:underline; }
+</style>
+</head>
+<body>
+
+<div id="app">
+
+<header>
+  <h1>Happy Teachers Day</h1>
+  <div class="kicker">One Line, Every Dot</div>
+  <div class="sub">One line, every dot, no repeats. Solve it your way...</div>
+  <a class="v1-link" href="v1/">Want to play version 1 of the game?</a>
+</header>
+
+<div class="progress" id="progress"></div>
+
+<div class="board-wrap">
+  <div id="boardStage" style="display:none;">
+    <canvas id="board"></canvas>
+    <div id="labels"></div>
+  </div>
+
+  <div class="overlay show" id="nameOverlay">
+    <div class="overlay-inner">
+      <h2 id="greetingText">Good Morning,</h2>
+      <input type="text" id="nameInput" placeholder="First name" maxlength="24" required>
+      <label class="check-row" for="notTeacherCheckbox">
+        <input type="checkbox" id="notTeacherCheckbox">
+        <span>I am not a teacher</span>
+      </label>
+      <button id="nameBtn" disabled>Let's begin</button>
+    </div>
+  </div>
+
+  <div class="overlay" id="overlay">
+    <div class="overlay-inner">
+      <h2 id="ovTitle">Nice!</h2>
+      <p class="quote" id="ovQuote"></p>
+      <button id="ovBtn">Continue</button>
+    </div>
+  </div>
+
+  <div class="overlay" id="personalOverlay">
+    <button class="back-link" id="personalBack" type="button">&larr; Back</button>
+    <div class="overlay-inner">
+      <h2 id="personalTitle">Nice!</h2>
+      <div class="share-note" id="personalBody"></div>
+      <button id="personalBtn">Next</button>
+    </div>
+  </div>
+
+  <div class="overlay" id="forkOverlay">
+    <button class="back-link" id="forkBack" type="button">&larr; Back</button>
+    <div class="overlay-inner">
+      <h2>Who's sharing this?</h2>
+      <div class="choice-list">
+        <button class="choice-btn" id="forkStudentBtn" type="button">A student, for my teacher</button>
+        <button class="choice-btn" id="forkTeacherBtn" type="button">A teacher, for my network</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay" id="forkSubOverlay">
+    <button class="back-link" id="forkSubBack" type="button">&larr; Back</button>
+    <div class="overlay-inner">
+      <h2>Posting publicly, or sending it to them directly?</h2>
+      <div class="choice-list">
+        <button class="choice-btn" id="forkPublicBtn" type="button">Posting publicly (I can tag a few teachers)</button>
+        <button class="choice-btn" id="forkPersonalBtn" type="button">Sending it directly to one teacher</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay" id="shareOverlay">
+    <button class="back-link" id="shareBack" type="button">&larr; Back</button>
+    <div class="overlay-inner">
+      <div class="share-block" id="shareBlock" style="display:block; margin-top:0; padding-top:0; border-top:none;">
+        <div class="share-label">Your three drawings</div>
+        <img class="collage-preview" id="collageImg" alt="Your three completed drawings">
+        <button class="save-btn" id="saveBtn" type="button">Save picture to your phone</button>
+        <p class="tip-callout"><strong>Tip:</strong>&nbsp;Posting on LinkedIn? Save the picture, then attach it before you write the post.</p>
+
+        <div class="share-label" id="messageLabel">Suggested message</div>
+        <div class="caption-box" id="captionBox"></div>
+        <button class="copy-btn" id="copyBtn">Copy message, paste into your post</button>
+
+        <button class="share-btn" id="shareBtn" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.6" y1="10.5" x2="15.4" y2="6.5"></line><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"></line></svg>
+          Share to your social platforms
+        </button>
+        <p class="share-hint" id="shareHint">Select your favourite way to share, remember to tag a fellow teacher if you like!</p>
+
+        <div class="replay-row">
+          <button class="replay-btn" id="replayBtn" type="button">Play again</button>
+          <a class="replay-btn" id="tryOtherLink" href="v1/">Try version 1</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast">Caption copied to clipboard</div>
+</div>
+
+<p class="hint" id="hint" style="display:none;">Tap any dot to begin. Trace every line once, no lifting.</p>
+<button class="reset-btn" id="resetBtn" style="display:none;" type="button">Start over</button>
+
+<footer>
+  Made for the ones who taught me to see the bigger picture &middot; <a href="https://tinyurl.com/JoTeolinkedin" target="_blank" rel="noopener">Joanna</a>
+</footer>
+
+</div>
+
+<script>
+(() => {
+  const boardStage = document.getElementById('boardStage');
+  const canvas = document.getElementById('board');
+  const ctx = canvas.getContext('2d');
+  const labelsEl = document.getElementById('labels');
+  const overlay = document.getElementById('overlay');
+  const ovTitle = document.getElementById('ovTitle');
+  const ovQuote = document.getElementById('ovQuote');
+  const ovBtn = document.getElementById('ovBtn');
+  const progressEl = document.getElementById('progress');
+  const hintEl = document.getElementById('hint');
+  const resetBtn = document.getElementById('resetBtn');
+
+  const personalOverlay = document.getElementById('personalOverlay');
+  const personalTitle = document.getElementById('personalTitle');
+  const personalBody = document.getElementById('personalBody');
+  const personalBtn = document.getElementById('personalBtn');
+  const personalBack = document.getElementById('personalBack');
+
+  const forkOverlay = document.getElementById('forkOverlay');
+  const forkBack = document.getElementById('forkBack');
+  const forkStudentBtn = document.getElementById('forkStudentBtn');
+  const forkTeacherBtn = document.getElementById('forkTeacherBtn');
+
+  const forkSubOverlay = document.getElementById('forkSubOverlay');
+  const forkSubBack = document.getElementById('forkSubBack');
+  const forkPublicBtn = document.getElementById('forkPublicBtn');
+  const forkPersonalBtn = document.getElementById('forkPersonalBtn');
+
+  const shareOverlay = document.getElementById('shareOverlay');
+  const shareBack = document.getElementById('shareBack');
+  const shareBlock = document.getElementById('shareBlock');
+  const messageLabel = document.getElementById('messageLabel');
+  const shareHint = document.getElementById('shareHint');
+  const shareBtn = document.getElementById('shareBtn');
+  const copyBtn = document.getElementById('copyBtn');
+  const captionBox = document.getElementById('captionBox');
+  const collageImg = document.getElementById('collageImg');
+  const saveBtn = document.getElementById('saveBtn');
+  const replayBtn = document.getElementById('replayBtn');
+  let collageDataUrl = null;
+  const toast = document.getElementById('toast');
+
+  function dataUrlToFile(dataUrl, filename){
+    const parts = dataUrl.split(',');
+    const mime = parts[0].match(/:(.*?);/)[1];
+    const bin = atob(parts[1]);
+    const arr = new Uint8Array(bin.length);
+    for(let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+    return new File([arr], filename, { type: mime });
+  }
+  const nameOverlay = document.getElementById('nameOverlay');
+  const nameInput = document.getElementById('nameInput');
+  const nameBtn = document.getElementById('nameBtn');
+  const greetingText = document.getElementById('greetingText');
+  const notTeacherCheckbox = document.getElementById('notTeacherCheckbox');
+  let notTeacher = false;
+
+  function timeGreeting(){
+    const h = new Date().getHours();
+    if(h < 12) return 'Good Morning';
+    if(h < 18) return 'Good Afternoon';
+    return 'Good Evening';
+  }
+  function updateGreeting(){
+    const name = nameInput.value.trim();
+    greetingText.textContent = name ? `${timeGreeting()}, ${name}` : `${timeGreeting()},`;
+  }
+
+  // ---- EDIT THIS ------------------------------------------------------
+  // Swap in your own giving-campaign link (this is what gets pasted into
+  // the shared message below).
+  const CAMPAIGN_LINK = 'https://tinyurl.com/SMUSCISAscent';
+  // Link to the game itself, for people to pass along to their own teachers.
+  const GAME_LINK = 'https://tinyurl.com/teachers-day-dots';
+  // ----------------------------------------------------------------------
+
+  let playerName = '';
+
+  // Who's sharing, and how. Set by the two fork screens after puzzle 3.
+  // shareAudience: 'student' | 'teacher'
+  // shareMode: 'public' | 'personal' (only meaningful when shareAudience === 'student')
+  let shareAudience = null;
+  let shareMode = null;
+
+  function currentVariant(){
+    if(shareAudience === 'teacher') return 'B';
+    return shareMode === 'public' ? 'A1' : 'A2';
+  }
+
+  // Three suggested messages, one per path: a public post that can tag a
+  // group of teachers, a private note to one teacher (no fund mention,
+  // they'll find that inside the game itself), and a teacher/mentor
+  // endorsing the game and the fund to their own network.
+  function buildCaption(){
+    const variant = currentVariant();
+    if(variant === 'A1'){
+      return `I just connected the dots in this game made for celebrating teachers, and it got me thinking about the ones who got me here.
+
+Tagging a few of you, because a proper thank you was overdue.
+
+While I'm at it: SMU School of Computing and Information Systems has a fund for students going through hard times, spearheaded by an educator, a big-hearted one just like you. If you'd like to find out more or contribute something to support, it's here.
+
+Play the game: ${GAME_LINK}
+About the fund: ${CAMPAIGN_LINK}
+#HappyTeachersDay`;
+    }
+    if(variant === 'A2'){
+      return `I just connected the dots in this game made for celebrating teachers, and you're who I thought of.
+
+Thank you for being the reason I kept going, even when it wasn't easy.
+
+Play here: ${GAME_LINK}`;
+    }
+    return `A game got me thinking about the people who shaped how I think today, so I'm passing it along for Teachers Day.
+
+Play a few rounds, it's genuinely fun, and it's a small way of saying thank you to whoever taught you something that stuck.
+
+While you're at it: SMU School of Computing and Information Systems has a fund for students going through a hard patch, spearheaded by a fellow educator, a faculty member who cared enough to act. If you would like to find out more or contribute something to support, that's here too, but the game's the main event.
+
+Play the game: ${GAME_LINK}
+About the fund: ${CAMPAIGN_LINK}
+#HappyTeachersDay #SMUSCIS`;
+  }
+
+  function applyVariantToShareScreen(){
+    const variant = currentVariant();
+    if(variant === 'A1'){
+      messageLabel.textContent = 'Your message to your teachers';
+      shareHint.textContent = 'Tag the teachers this reminds you of.';
+    }else if(variant === 'A2'){
+      messageLabel.textContent = 'Your message to them';
+      shareHint.textContent = "Send this straight to them, they'll find the rest inside the game.";
+    }else{
+      messageLabel.textContent = 'Your message to your network';
+      shareHint.textContent = 'Select your favourite way to share, your network is bigger than you think.';
+    }
+    const caption = buildCaption();
+    captionBox.textContent = caption;
+    copyText(caption).then(ok => {
+      if(ok) showToast('Message copied, paste it into your post');
+    });
+  }
+
+  // ---- puzzle geometry helpers -----------------------------------------
+  function polygon(cx,cy,r,n){
+    const pts = [];
+    for(let i=0;i<n;i++){
+      const a = (2*Math.PI/n)*i - Math.PI/2;
+      pts.push({x:cx+r*Math.cos(a), y:cy+r*Math.sin(a)});
+    }
+    return pts;
+  }
+  function allPairs(n){
+    const edges = [];
+    for(let i=0;i<n;i++) for(let j=i+1;j<n;j++) edges.push([i,j]);
+    return edges;
+  }
+
+  // Each puzzle is a graph: dots (pts) plus the lines that exist between
+  // them (edges). The player decides the order and starting dot — the
+  // only rule is every line gets drawn exactly once, in one unbroken path.
+  const PUZZLES = [
+    {
+      name:'Two Made One',
+      pts: [ {x:15,y:32},{x:15,y:68},{x:50,y:50},{x:85,y:32},{x:85,y:68} ],
+      edges: [ [0,1],[1,2],[2,0],[2,3],[3,4],[4,2] ],
+      title:'You found the through-line, {name}',
+      quote:'You showed me where things connect.'
+    },
+    {
+      name:'The Letter You Kept',
+      pts: [ {x:20,y:28},{x:80,y:28},{x:50,y:8},{x:20,y:82},{x:80,y:82} ],
+      edges: [ [0,1],[1,4],[4,3],[3,0],[0,2],[2,1],[0,4],[1,3] ],
+      title:'You traced it in one line, {name}',
+      quote:'You never made it more complicated than it needed to be.'
+    },
+    {
+      name:'The Whole Picture',
+      // Six dots, almost every pair connected (13 of 15 possible lines).
+      // Unlike a puzzle with an obvious "trap" edge, every dot here looks
+      // equally busy — there's no visual tell for where to start. Only 2
+      // of the 6 dots actually work as a starting point, and the only way
+      // to find out which is to plan the whole route before committing.
+      pts: polygon(50,52,34,6),
+      edges: allPairs(6).filter(([a,b]) => !((a===0&&b===1)||(a===3&&b===4))),
+      title:'You saw the whole picture, {name}',
+      quote:'You always knew where to start. I am still learning that.'
+    }
+  ];
+
+  function personalize(str){
+    return str.replace(/\{name\}/g, playerName || 'friend');
+  }
+
+  // Strips the trailing ", {name}" from a title for the shareable collage,
+  // where the message should read as universal rather than aimed at one
+  // player's teacher.
+  function stripName(str){
+    return str.replace(/,?\s*\{name\}/g, '').trim();
+  }
+
+  let puzzleIndex = 0;
+  let W,H,DPR;
+  let pts, edges, adj, usedEdges, currentNode;
+  const puzzleSnapshots = [];
+
+  function buildProgress(){
+    progressEl.innerHTML = '';
+    PUZZLES.forEach((_,i) => {
+      const d = document.createElement('div');
+      d.className = 'step' + (i < puzzleIndex ? ' done' : i===puzzleIndex ? ' active' : '');
+      progressEl.appendChild(d);
+    });
+  }
+
+  function resize(){
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    const rect = canvas.getBoundingClientRect();
+    W = rect.width; H = rect.height;
+    canvas.width = W*DPR; canvas.height = H*DPR;
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+  }
+  window.addEventListener('resize', () => {
+    resize();
+    if(!pts) return;
+    layoutNodes();
+    draw();
+  });
+
+  function toPixel(p){
+    return { x: (p.x/100)*W, y:(p.y/100)*H };
+  }
+
+  function buildAdjacency(){
+    adj = pts.map(() => []);
+    edges.forEach((e, idx) => {
+      adj[e[0]].push({ edgeIdx:idx, other:e[1] });
+      adj[e[1]].push({ edgeIdx:idx, other:e[0] });
+    });
+  }
+
+  function remainingDegree(nodeIdx){
+    return adj[nodeIdx].filter(e => !usedEdges.has(e.edgeIdx)).length;
+  }
+
+  function layoutNodes(){
+    labelsEl.innerHTML = '';
+    pts.forEach((p,i) => {
+      const px = toPixel(p);
+      const div = document.createElement('div');
+      div.className = 'dot';
+      div.style.left = px.x + 'px';
+      div.style.top = px.y + 'px';
+      div.dataset.idx = i;
+      labelsEl.appendChild(div);
+    });
+    updateNodeStates();
+  }
+
+  function updateNodeStates(flashIdx){
+    [...labelsEl.children].forEach((el,i) => {
+      el.classList.toggle('current', i === currentNode);
+      el.classList.toggle('dead', i !== currentNode && remainingDegree(i) === 0);
+      if(i === flashIdx){
+        el.classList.remove('invalid');
+        void el.offsetWidth;
+        el.classList.add('invalid');
+      }
+    });
+  }
+
+  function drawLine(a, b, color, width){
+    const pa = toPixel(pts[a]), pb = toPixel(pts[b]);
+    ctx.beginPath();
+    ctx.moveTo(pa.x, pa.y);
+    ctx.lineTo(pb.x, pb.y);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+  }
+
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    ctx.fillStyle = '#fffaf1';
+    ctx.fillRect(0,0,W,H);
+    // faint ghost lines for every edge not yet drawn, so the shape is visible
+    edges.forEach((e, idx) => {
+      if(!usedEdges.has(idx)) drawLine(e[0], e[1], 'rgba(34,57,44,0.16)', 2);
+    });
+    // solid lines for the path drawn so far
+    edges.forEach((e, idx) => {
+      if(usedEdges.has(idx)) drawLine(e[0], e[1], '#c15a3e', 3.5);
+    });
+  }
+
+  function loadPuzzle(i){
+    const puzzle = PUZZLES[i];
+    pts = puzzle.pts;
+    edges = puzzle.edges;
+    usedEdges = new Set();
+    currentNode = null;
+    buildAdjacency();
+    hideAllOverlays();
+    boardStage.style.display = 'block';
+    resize();
+    layoutNodes();
+    draw();
+    buildProgress();
+    hintEl.style.display = 'block';
+    hintEl.classList.remove('stuck');
+    hintEl.textContent = 'Tap any dot to begin. Trace every line once, no lifting.';
+    resetBtn.style.display = 'none';
+  }
+
+  function resetPuzzle(){
+    usedEdges = new Set();
+    currentNode = null;
+    draw();
+    updateNodeStates();
+    hintEl.classList.remove('stuck');
+    hintEl.textContent = 'Tap any dot to begin. Trace every line once, no lifting.';
+    resetBtn.style.display = 'none';
+  }
+  resetBtn.addEventListener('click', resetPuzzle);
+
+  function showStuck(){
+    hintEl.classList.add('stuck');
+    hintEl.textContent = 'Dead end — start over and try a new path.';
+    resetBtn.style.display = 'inline-block';
+  }
+
+  function tapAt(clientX, clientY){
+    if(!pts) return;
+    const rect = canvas.getBoundingClientRect();
+    const x = clientX - rect.left, y = clientY - rect.top;
+    let hit = -1, best = 34;
+    pts.forEach((p,i) => {
+      const px = toPixel(p);
+      const d = Math.hypot(x-px.x, y-px.y);
+      if(d < best){ best = d; hit = i; }
+    });
+    if(hit === -1) return;
+
+    if(currentNode === null){
+      currentNode = hit;
+      updateNodeStates();
+      resetBtn.style.display = 'inline-block';
+      hintEl.textContent = 'Now tap a connected dot.';
+      return;
+    }
+
+    if(hit === currentNode) return;
+
+    const found = adj[currentNode].find(e => e.other === hit && !usedEdges.has(e.edgeIdx));
+    if(!found){
+      updateNodeStates(hit);
+      return;
+    }
+
+    usedEdges.add(found.edgeIdx);
+    currentNode = hit;
+    draw();
+    updateNodeStates();
+
+    if(usedEdges.size === edges.length){
+      puzzleSnapshots[puzzleIndex] = canvas.toDataURL('image/png');
+      hintEl.textContent = 'One line, done.';
+      setTimeout(finishPuzzle, 500);
+      return;
+    }
+
+    if(remainingDegree(currentNode) === 0){
+      showStuck();
+    }else{
+      hintEl.textContent = 'Keep going.';
+    }
+  }
+
+  function wrapLines(cctx, text, maxWidth){
+    const words = text.split(' ');
+    const lines = [];
+    let line = '';
+    words.forEach(word => {
+      const test = line ? line + ' ' + word : word;
+      if(cctx.measureText(test).width > maxWidth && line){
+        lines.push(line);
+        line = word;
+      } else {
+        line = test;
+      }
+    });
+    if(line) lines.push(line);
+    return lines;
+  }
+
+  async function loadImg(src){
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.src = src;
+    });
+  }
+
+  function drawRoundRect(cctx, x, y, w, h, r){
+    cctx.beginPath();
+    cctx.moveTo(x+r, y);
+    cctx.arcTo(x+w, y, x+w, y+h, r);
+    cctx.arcTo(x+w, y+h, x, y+h, r);
+    cctx.arcTo(x, y+h, x, y, r);
+    cctx.arcTo(x, y, x+w, y, r);
+    cctx.closePath();
+  }
+
+  async function buildCollage(){
+    // Portrait canvas sized for social feeds (roughly a 4:5 crop), built
+    // tall on a working canvas and cropped to actual content height at
+    // the end so there's no dead space.
+    const cw = 1080, pad = 64;
+    const cell = 290, gap = 45;
+    const rowW = cell*3 + gap*2;
+    const rowX = (cw - rowW)/2;
+    const variant = currentVariant();
+
+    const c = document.createElement('canvas');
+    c.width = cw; c.height = 1760;
+    const cctx = c.getContext('2d');
+    cctx.fillStyle = '#fffaf1';
+    cctx.fillRect(0,0,cw,c.height);
+    cctx.textAlign = 'center';
+
+    let y = 90;
+
+    // eyebrow — differs by who's sharing
+    cctx.fillStyle = '#c98a4b';
+    cctx.font = '600 19px Georgia, serif';
+    if(variant === 'B'){
+      cctx.fillText('I   P L A Y E D   T H I S   F O R   T E A C H E R S   D A Y', cw/2, y);
+      y += 30;
+      cctx.fillText('A N D   L E F T   3   M E S S A G E S', cw/2, y);
+    }else{
+      cctx.fillText('A   S T U D E N T   S H A R E D   T H I S   G A M E   W I T H   M E', cw/2, y);
+      y += 30;
+      cctx.fillText('A N D   L E F T   3   M E S S A G E S', cw/2, y);
+    }
+    y += 80;
+
+    // title — the headline of the piece, deliberately the biggest text on it
+    cctx.fillStyle = '#22392c';
+    cctx.font = '700 64px Georgia, serif';
+    const titleLines = wrapLines(cctx, 'Celebrate Teachers Day With Me', cw - pad*2);
+    titleLines.forEach(line => { cctx.fillText(line, cw/2, y); y += 70; });
+    y += 10;
+
+    // gold rule
+    cctx.strokeStyle = '#c98a4b';
+    cctx.lineWidth = 2;
+    cctx.beginPath();
+    cctx.moveTo(cw/2 - 60, y); cctx.lineTo(cw/2 + 60, y);
+    cctx.stroke();
+    y += 48;
+
+    // hook line — differs by who's sharing
+    cctx.fillStyle = '#4a5a4c';
+    cctx.font = 'italic 30px Georgia, serif';
+    const hook = variant === 'B'
+      ? 'Connecting the dots is half of what we do for a living, isn’t it?'
+      : 'I just connected the dots… isn’t that what teachers do?';
+    const hookLines = wrapLines(cctx, hook, cw - pad*2 - 60);
+    hookLines.forEach(line => { cctx.fillText(line, cw/2, y); y += 38; });
+    y += 40;
+
+    // framing line — makes the second-person captions below unambiguous
+    cctx.fillStyle = '#22392c';
+    cctx.font = '600 22px Georgia, serif';
+    cctx.fillText('3 things I’d tell the teachers who shaped me:', cw/2, y);
+    y += 48;
+
+    // three drawings — captions are the key message only, no player name
+    const rowTop = y;
+    let maxCaptionBottom = rowTop;
+    for(let i=0;i<PUZZLES.length;i++){
+      const puzzle = PUZZLES[i];
+      const x = rowX + i*(cell+gap);
+
+      const img = await loadImg(puzzleSnapshots[i]);
+      cctx.drawImage(img, x, rowTop, cell, cell);
+      cctx.strokeStyle = 'rgba(34,57,44,0.18)';
+      cctx.lineWidth = 1.5;
+      cctx.strokeRect(x, rowTop, cell, cell);
+
+      let cy = rowTop + cell + 34;
+      cctx.fillStyle = '#22392c';
+      cctx.font = '600 19px Georgia, serif';
+      const qLines = wrapLines(cctx, puzzle.quote, cell - 6).slice(0,3);
+      qLines.forEach(line => { cctx.fillText(line, x + cell/2, cy); cy += 24; });
+
+      if(cy > maxCaptionBottom) maxCaptionBottom = cy;
+    }
+    y = maxCaptionBottom + 40;
+
+    // send-the-game line
+    cctx.fillStyle = '#8a7a5f';
+    cctx.font = '600 20px Georgia, serif';
+    cctx.fillText('Send this game to your teachers:', cw/2, y);
+    y += 28;
+    cctx.fillStyle = '#c98a4b';
+    cctx.font = '700 22px Georgia, serif';
+    cctx.fillText(GAME_LINK, cw/2, y);
+    y += 58;
+
+    // fund band — strong, clear, tied to the Teachers' Day theme
+    const bandTop = y;
+    const bandPad = 44;
+    cctx.font = '700 32px Georgia, serif';
+    const fundHeadLines = wrapLines(cctx, 'Join Me In Supporting the SMU SCIS ASCENT FUND', cw - pad*2 - 40);
+    cctx.font = '500 22px Georgia, serif';
+    const fundBodyLines = wrapLines(cctx, 'This Teachers’ Day is extra meaningful because SMU SCIS launched a fund to help students bounce back from temporary hardships, so they can focus on getting the most out of their education.', cw - pad*2 - 80);
+    const bandH = bandPad*2 + fundHeadLines.length*40 + 16 + fundBodyLines.length*30;
+    cctx.fillStyle = '#22392c';
+    cctx.fillRect(0, bandTop, cw, bandH);
+    let fy = bandTop + bandPad + 28;
+    cctx.fillStyle = '#e0a05a';
+    cctx.font = '700 34px Georgia, serif';
+    fundHeadLines.forEach(line => { cctx.fillText(line, cw/2, fy); fy += 40; });
+    fy += 16;
+    cctx.fillStyle = '#f4ede2';
+    cctx.font = '500 22px Georgia, serif';
+    fundBodyLines.forEach(line => { cctx.fillText(line, cw/2, fy); fy += 30; });
+    y = bandTop + bandH + 46;
+
+    // "do you know" callout — no name, credit stays with "an educator"
+    cctx.font = '500 20px Georgia, serif';
+    const dykBody = wrapLines(cctx, 'This fund was spearheaded by an educator, a faculty member who cared enough to act. If you would like to find out more or contribute something to support, this is the link.', cw - pad*2 - 68);
+    const boxPad = 34;
+    const boxH = boxPad*2 + 34 + 14 + dykBody.length*28;
+    const boxX = pad, boxW = cw - pad*2;
+    cctx.fillStyle = '#f4ede2';
+    cctx.fillRect(boxX, y, boxW, boxH);
+    cctx.fillStyle = '#c98a4b';
+    cctx.fillRect(boxX, y, 6, boxH);
+    let dy = y + boxPad + 10;
+    cctx.textAlign = 'left';
+    cctx.fillStyle = '#22392c';
+    cctx.font = '700 24px Georgia, serif';
+    cctx.fillText('Do you know?', boxX + boxPad, dy);
+    dy += 34;
+    cctx.font = '500 20px Georgia, serif';
+    cctx.fillStyle = '#3f4c40';
+    dykBody.forEach(line => { cctx.fillText(line, boxX + boxPad, dy); dy += 28; });
+    cctx.textAlign = 'center';
+    y += boxH + 56;
+
+    // CTA — a prominent pill button, the clearest call to action on the page
+    const ctaW = 700, ctaH = 108;
+    const ctaX = (cw - ctaW)/2;
+    cctx.fillStyle = 'rgba(34,57,44,0.12)';
+    drawRoundRect(cctx, ctaX, y+6, ctaW, ctaH, ctaH/2);
+    cctx.fill();
+    cctx.fillStyle = '#e0a05a';
+    drawRoundRect(cctx, ctaX, y, ctaW, ctaH, ctaH/2);
+    cctx.fill();
+    cctx.fillStyle = '#22392c';
+    cctx.font = '700 32px Georgia, serif';
+    cctx.fillText('Support the Fund  →', cw/2, y + 46);
+    cctx.font = '600 22px Georgia, serif';
+    cctx.fillText(CAMPAIGN_LINK, cw/2, y + 82);
+    y += ctaH + 70;
+
+    const out = document.createElement('canvas');
+    out.width = cw; out.height = Math.round(y);
+    out.getContext('2d').drawImage(c, 0, 0);
+    return out.toDataURL('image/png');
+  }
+
+  function hideAllOverlays(){
+    [overlay, personalOverlay, forkOverlay, forkSubOverlay, shareOverlay].forEach(el => el.classList.remove('show'));
+  }
+
+  function finishPuzzle(){
+    const puzzle = PUZZLES[puzzleIndex];
+    const isLast = puzzleIndex === PUZZLES.length - 1;
+    ovTitle.textContent = personalize(puzzle.title);
+    ovQuote.textContent = '“' + puzzle.quote + '”';
+    ovBtn.textContent = 'Next';
+
+    if(isLast){
+      // Build the collage now, ahead of time, so it's ready the moment the
+      // player reaches the share screen — nothing about sharing happens yet.
+      setTimeout(async () => {
+        const collageUrl = await buildCollage();
+        collageImg.src = collageUrl;
+        collageDataUrl = collageUrl;
+      }, 60);
+    }
+
+    boardStage.style.display = 'none';
+    hintEl.style.display = 'none';
+    resetBtn.style.display = 'none';
+    hideAllOverlays();
+    overlay.classList.add('show');
+  }
+
+  // Screen order after puzzle 3: puzzle-result ("Next") -> personal message
+  // screen (its own step, the fund story) -> "who's sharing" fork -> (if
+  // student) public/personal sub-fork -> share screen.
+  function showPersonalScreen(){
+    const safeName = playerName.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const linkOpen = `<a href="${CAMPAIGN_LINK}" target="_blank" rel="noopener">`;
+
+    if(notTeacher){
+      personalTitle.textContent = 'Thank You for Playing';
+      personalBody.innerHTML =
+        `<p>Thank you for taking the time to play, ${safeName}, and for celebrating the teachers who shaped you along the way. Small gestures like this one matter more than we often realise.</p>` +
+        `<p>By the way, do you know ${linkOpen}SMU School of Computing and Information Systems just launched a fund</a> to help undergraduates stay in school and get the most out of their education? It feels especially fitting that this comes together on Teachers Day, since it was spearheaded by a faculty member, a big-hearted educator who cared enough to act. If you would like to find out more or contribute something to support, ${linkOpen}click here</a>.</p>`;
+    }else{
+      personalTitle.innerHTML = `Thank You, <span style="color:#e0a05a;">${safeName}</span>`;
+      personalBody.innerHTML =
+        `<p>${safeName}, from the bottom of my heart, thank you. For the patience, the quiet encouragement, and for believing in me even on the days I didn't believe in myself. Teachers Day is a small nod to something much bigger than one day can hold.</p>` +
+        `<p>By the way, ${safeName}, do you know ${linkOpen}SMU School of Computing and Information Systems just launched a fund</a> to help undergraduates stay in school and get the most out of their education? It feels especially fitting that this comes together on Teachers Day, since it was spearheaded by a faculty member, a big-hearted educator just like you. If you would like to find out more or contribute something to support, ${linkOpen}click here</a>.</p>`;
+    }
+    hideAllOverlays();
+    personalOverlay.classList.add('show');
+  }
+
+  function showForkScreen(){
+    hideAllOverlays();
+    forkOverlay.classList.add('show');
+  }
+
+  function showForkSubScreen(){
+    hideAllOverlays();
+    forkSubOverlay.classList.add('show');
+  }
+
+  function showShareScreen(){
+    hideAllOverlays();
+    shareOverlay.classList.add('show');
+    applyVariantToShareScreen();
+  }
+
+  ovBtn.addEventListener('click', () => {
+    const isLast = puzzleIndex === PUZZLES.length - 1;
+    if(isLast){
+      showPersonalScreen();
+      return;
+    }
+    puzzleIndex = (puzzleIndex + 1) % PUZZLES.length;
+    loadPuzzle(puzzleIndex);
+  });
+
+  personalBtn.addEventListener('click', showForkScreen);
+  personalBack.addEventListener('click', () => {
+    hideAllOverlays();
+    overlay.classList.add('show');
+  });
+
+  forkStudentBtn.addEventListener('click', () => {
+    shareAudience = 'student';
+    showForkSubScreen();
+  });
+  forkTeacherBtn.addEventListener('click', () => {
+    shareAudience = 'teacher';
+    shareMode = null;
+    showShareScreen();
+  });
+  forkBack.addEventListener('click', showPersonalScreen);
+
+  forkPublicBtn.addEventListener('click', () => {
+    shareMode = 'public';
+    showShareScreen();
+  });
+  forkPersonalBtn.addEventListener('click', () => {
+    shareMode = 'personal';
+    showShareScreen();
+  });
+  forkSubBack.addEventListener('click', showForkScreen);
+
+  shareBack.addEventListener('click', () => {
+    if(shareAudience === 'student'){
+      showForkSubScreen();
+    }else{
+      showForkScreen();
+    }
+  });
+
+  replayBtn.addEventListener('click', () => {
+    puzzleIndex = 0;
+    puzzleSnapshots.length = 0;
+    shareAudience = null;
+    shareMode = null;
+    loadPuzzle(0);
+  });
+
+  function showToast(msg){
+    toast.textContent = msg;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2400);
+  }
+
+  async function copyText(text){
+    try{
+      await navigator.clipboard.writeText(text);
+      return true;
+    }catch(e){ /* fall through */ }
+    try{
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      const ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      return ok;
+    }catch(e){
+      return false;
+    }
+  }
+
+  copyBtn.addEventListener('click', async () => {
+    const ok = await copyText(buildCaption());
+    if(ok){
+      showToast('Message copied, paste it into your post');
+    }else{
+      showToast('Couldn’t auto-copy, select the text above and copy it');
+    }
+  });
+
+  async function shareImageFile(text){
+    if(!collageDataUrl){
+      showToast('Still preparing your picture, try again in a second');
+      return false;
+    }
+    const file = dataUrlToFile(collageDataUrl, 'connect-the-dots.png');
+    const shareData = { files: [file], title: 'Happy Teachers Day' };
+    if(text) shareData.text = text;
+
+    if(navigator.canShare && navigator.canShare(shareData)){
+      try{
+        await navigator.share(shareData);
+        return true;
+      }catch(e){
+        if(e && e.name === 'AbortError') return false;
+      }
+    }else if(navigator.canShare && navigator.canShare({ files: [file] })){
+      try{
+        await navigator.share({ files: [file], title: 'Happy Teachers Day' });
+        return true;
+      }catch(e){
+        if(e && e.name === 'AbortError') return false;
+      }
+    }
+
+    const win = window.open();
+    if(win){
+      win.document.write('<title>Your Connect the Dots picture</title><body style="margin:0;background:#111;display:flex;align-items:center;justify-content:center;min-height:100vh;"><img src="' + collageDataUrl + '" style="max-width:100%;height:auto;" alt="Your three completed drawings"></body>');
+      showToast('Opened your picture, press and hold it to save or share');
+    }else{
+      showToast('Allow pop-ups, then try again');
+    }
+    return false;
+  }
+
+  saveBtn.addEventListener('click', () => { shareImageFile(); });
+
+  shareBtn.addEventListener('click', async () => {
+    const shared = await shareImageFile(buildCaption());
+    if(shared){
+      showToast('If your message didn’t carry over, just paste it in');
+    }
+  });
+
+  function refreshNameBtn(){
+    nameBtn.disabled = nameInput.value.trim().length === 0;
+  }
+  nameInput.addEventListener('input', () => { refreshNameBtn(); updateGreeting(); });
+  refreshNameBtn();
+  updateGreeting();
+
+  nameBtn.addEventListener('click', () => {
+    const name = nameInput.value.trim();
+    if(!name){
+      nameInput.focus();
+      return;
+    }
+    playerName = name;
+    notTeacher = notTeacherCheckbox.checked;
+    nameOverlay.classList.remove('show');
+    loadPuzzle(0);
+  });
+  nameInput.addEventListener('keydown', e => {
+    if(e.key === 'Enter' && !nameBtn.disabled) nameBtn.click();
+  });
+
+  canvas.addEventListener('pointerdown', e => tapAt(e.clientX, e.clientY));
+
+})();
+</script>
+</body>
+</html>
