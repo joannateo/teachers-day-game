@@ -715,41 +715,35 @@ More info: ${CAMPAIGN_LINK}
 
   shareBtn.addEventListener('click', async () => {
     const caption = buildCaption(playerName);
-    const shareUrl = 'https://www.linkedin.com/sharing/share-offsite/?url=' + encodeURIComponent(CAMPAIGN_LINK);
+    const webShareUrl = 'https://www.linkedin.com/sharing/share-offsite/?url=' + encodeURIComponent(CAMPAIGN_LINK);
+    // LinkedIn's own (undocumented but widely used) app URL scheme — when
+    // the app is installed, navigating to this switches straight to it
+    // instead of surfacing the OS's general "share to any app" sheet.
+    const appShareUrl = 'linkedin://sharing/share-offsite/?url=' + encodeURIComponent(CAMPAIGN_LINK);
 
-    // Prefer the native share sheet where it's available (iOS/Android):
-    // it lists the LinkedIn app directly, alongside everything else
-    // installed, and can carry the image + text together.
-    try{
-      if(navigator.canShare && collageImg.src){
-        const res = await fetch(collageImg.src);
-        const blob = await res.blob();
-        const file = new File([blob], 'connect-the-dots.png', { type: 'image/png' });
-        if(navigator.canShare({ files: [file] })){
-          await navigator.share({ files: [file], text: caption, title: 'Happy Teachers Day' });
-          return;
-        }
-      }
-      if(navigator.share){
-        await navigator.share({ text: caption, title: 'Happy Teachers Day' });
-        return;
-      }
-    }catch(e){
-      // user cancelled the native sheet, or it isn't available — fall through
-      if(e && e.name === 'AbortError') return;
-    }
-
-    // Fallback: copy the caption, then hand off to LinkedIn. Navigating in
-    // the same tab (rather than opening a new one) gives mobile OSes the
-    // best chance of routing this straight into the LinkedIn app via its
-    // registered app link, instead of just the browser.
     try{
       await navigator.clipboard.writeText(caption);
       showToast('Message copied — opening LinkedIn…');
     }catch(e){
       showToast('Opening LinkedIn — paste your copied message there');
     }
-    setTimeout(() => { window.location.href = shareUrl; }, 600);
+
+    // Detect whether the app actually took over (the tab goes to the
+    // background the moment iOS/Android hands off to it).
+    let appOpened = false;
+    const onHide = () => { if(document.hidden) appOpened = true; };
+    document.addEventListener('visibilitychange', onHide);
+
+    window.location.href = appShareUrl;
+
+    setTimeout(() => {
+      document.removeEventListener('visibilitychange', onHide);
+      if(!appOpened){
+        // the app scheme did nothing — LinkedIn isn't installed, so fall
+        // back to the normal web share link instead
+        window.location.href = webShareUrl;
+      }
+    }, 900);
   });
 
   function refreshNameBtn(){
