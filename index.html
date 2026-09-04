@@ -277,15 +277,16 @@
     cursor:pointer;
   }
   .share-btn{
-    background:#0a66c2;
-    color:#fff;
+    background:#e0a05a;
+    color:#22392c;
     display:flex;
     align-items:center;
     justify-content:center;
     gap:8px;
     width:100%;
+    font-weight:600;
   }
-  .share-btn svg{ width:16px; height:16px; fill:#fff; }
+  .share-btn svg{ width:17px; height:17px; color:#22392c; }
   .toast{
     position:fixed;
     bottom:24px;
@@ -366,10 +367,10 @@
         <button class="copy-btn" id="copyBtn">Copy message &mdash; paste into your post</button>
 
         <button class="share-btn" id="shareBtn" type="button">
-          <svg viewBox="0 0 24 24"><path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.03-1.85-3.03-1.85 0-2.14 1.45-2.14 2.94v5.66H9.34V9h3.41v1.56h.05c.48-.9 1.64-1.85 3.38-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.07 2.07 0 1 1 0-4.13 2.07 2.07 0 0 1 0 4.13zM7.12 20.45H3.56V9h3.56v11.45z"/></svg>
-          Share on LinkedIn
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.6" y1="10.5" x2="15.4" y2="6.5"></line><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"></line></svg>
+          Share to your social platforms
         </button>
-        <p class="share-hint">Pick LinkedIn from the menu that opens — your picture will already be attached, ready to post.</p>
+        <p class="share-hint">Pick where you'd like to post — your picture will already be attached, ready to go.</p>
       </div>
     </div>
   </div>
@@ -436,7 +437,7 @@
 
 To every teacher, mentor, professor who took the time to make it click, this one's for you. Happy Teachers Day to the people still shaping how I think, and to the ones I get to teach in return.
 
-Also, the SMU School of Computing and Information Systems just launched a new giving fund, and @joanna teo wants me to tell you she hopes more of you will give back, so more undergraduates from financially needy backgrounds get to reap the same education fruits she did. If you believe in what education can do, this is the moment. #BuildForBetter #SgSMU #SMUSCIS
+SMU School of Computing and Information Systems just launched a new giving fund, and @joanna teo wants me to tell you she hopes more of you will give back, so more undergraduates from financially needy backgrounds get to reap the same education fruits she did. If you believe in what education can do, this is the moment. #BuildForBetter #SgSMU #SMUSCIS
 
 More info: ${CAMPAIGN_LINK}
 
@@ -728,7 +729,7 @@ More info: ${CAMPAIGN_LINK}
       const safeName = playerName.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
       shareNote.innerHTML =
         `<p>${safeName}, did you know SMU School of Computing and Information Systems just launched a fund to give undergraduates the gift of quality education, from teachers like you?</p>` +
-        `<p>I'd love for more people to join this cause. If you're up for it, share the message below on LinkedIn.</p>` +
+        `<p>I'd love for more people to join this cause. If you're up for it, share the message below on LinkedIn or any other platforms.</p>` +
         `<p>Here's how:</p>`;
 
       const caption = buildCaption(playerName);
@@ -839,7 +840,7 @@ More info: ${CAMPAIGN_LINK}
   shareBtn.addEventListener('click', async () => {
     const shared = await shareImageFile();
     if(shared){
-      showToast('Pick LinkedIn from the list, then paste your copied message in');
+      showToast('Pick where to post, then paste your copied message in');
     }
   });
 
