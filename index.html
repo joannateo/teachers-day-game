@@ -215,6 +215,8 @@
     color:rgba(244,237,226,0.75);
     margin-bottom:14px;
   }
+  .share-note p{ margin:0 0 10px; }
+  .share-note p:last-child{ margin-bottom:0; }
   .share-label{
     font-size:11px;
     letter-spacing:1.5px;
@@ -346,17 +348,17 @@
       <p class="quote" id="ovQuote"></p>
       <button id="ovBtn">Continue</button>
       <div class="share-block" id="shareBlock" style="display:none;">
-        <p class="share-note">Would you help spread the word? Copy the message, save the picture of what you drew, then share it your way.</p>
-
-        <div class="share-label">Your message</div>
-        <div class="caption-box" id="captionBox"></div>
-        <button class="copy-btn" id="copyBtn">Copy message text</button>
+        <div class="share-note" id="shareNote"></div>
 
         <div class="share-label">Your three drawings</div>
         <img class="collage-preview" id="collageImg" alt="Your three completed drawings">
         <button class="save-btn" id="saveBtn" type="button">Save image</button>
 
-        <button class="share-btn" id="shareBtn">
+        <div class="share-label">Your message</div>
+        <div class="caption-box" id="captionBox"></div>
+        <button class="copy-btn" id="copyBtn">Copy message &mdash; paste into your post</button>
+
+        <button class="share-btn" id="shareBtn" type="button">
           <svg viewBox="0 0 24 24"><path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.03-1.85-3.03-1.85 0-2.14 1.45-2.14 2.94v5.66H9.34V9h3.41v1.56h.05c.48-.9 1.64-1.85 3.38-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.07 2.07 0 1 1 0-4.13 2.07 2.07 0 0 1 0 4.13zM7.12 20.45H3.56V9h3.56v11.45z"/></svg>
           Share on LinkedIn
         </button>
@@ -369,7 +371,7 @@
 
 <p class="hint" id="hint" style="display:none;">Tap the dots in order, 1 to the end, and watch the picture appear.</p>
 
-<footer>made for the ones who taught me to see the picture &middot; Joanna</footer>
+<footer>Made for the ones who taught me to see the bigger picture &middot; Joanna</footer>
 
 <script>
 (() => {
@@ -384,6 +386,7 @@
   const progressEl = document.getElementById('progress');
   const hintEl = document.getElementById('hint');
   const shareBlock = document.getElementById('shareBlock');
+  const shareNote = document.getElementById('shareNote');
   const shareBtn = document.getElementById('shareBtn');
   const copyBtn = document.getElementById('copyBtn');
   const captionBox = document.getElementById('captionBox');
@@ -425,7 +428,7 @@
 
 To every teacher, mentor, professor who took the time to make it click, this one's for you. Happy Teachers Day to the people still shaping how I think, and to the ones I get to teach in return.
 
-One more thing: SMU SCIS just launched a new giving fund, and @joanna teo wants me to tell you she hopes more of you will give back, so more juniors from financially needy backgrounds get to reap the same education fruits she did. If you believe in what education can do, this is the moment. #BuildForBetter #SgSMU #SMUSCIS
+One more thing: The SMU School of Computing and Information Systems just launched a new giving fund, and @joanna teo wants me to tell you she hopes more of you will give back, so more juniors from financially needy backgrounds get to reap the same education fruits she did. If you believe in what education can do, this is the moment. #BuildForBetter #SgSMU #SMUSCIS
 
 More info: ${CAMPAIGN_LINK}
 
@@ -446,7 +449,7 @@ More info: ${CAMPAIGN_LINK}
     {
       name:'The Spark',
       pts: star(50,48,38,15,5),
-      title:'A Spark, Lit',
+      title:'You lit the spark, {name}',
       quote:'The best teachers don’t fill a cup. They light a spark and step back.'
     },
     {
@@ -455,7 +458,7 @@ More info: ${CAMPAIGN_LINK}
         {x:50,y:30},{x:15,y:22},{x:15,y:70},{x:50,y:80},
         {x:85,y:70},{x:85,y:22},{x:50,y:30},{x:50,y:78}
       ],
-      title:'A Page Stayed Open',
+      title:'You kept the page open, {name}',
       quote:'Some lessons don’t stay in the classroom. Yours didn’t.'
     },
     {
@@ -464,10 +467,16 @@ More info: ${CAMPAIGN_LINK}
         {x:50,y:15},{x:74,y:42},{x:60,y:42},{x:60,y:85},
         {x:40,y:85},{x:40,y:42},{x:26,y:42},{x:50,y:15}
       ],
-      title:'They Pointed the Way',
+      title:'You pointed the way, {name}',
       quote:'A good teacher points you north, then trusts you to walk.'
     }
   ];
+
+  // Fills in the player's first name wherever a puzzle's title/quote uses
+  // the {name} placeholder; falls back gracefully if it's ever empty.
+  function personalize(str){
+    return str.replace(/\{name\}/g, playerName || 'friend');
+  }
 
   let puzzleIndex = 0;
   let W,H,DPR,nextIdx,pts,connected;
@@ -571,6 +580,10 @@ More info: ${CAMPAIGN_LINK}
   }
 
   function tapAt(clientX, clientY){
+    // the puzzle is already solved and waiting to hand off to finishPuzzle
+    // (there's a brief delay for the closing-line animation) — ignore any
+    // taps that land in that window instead of reading past the last dot.
+    if(!pts || nextIdx >= pts.length) return;
     const rect = canvas.getBoundingClientRect();
     const x = clientX - rect.left, y = clientY - rect.top;
     const target = toPixel(pts[nextIdx]);
@@ -623,7 +636,7 @@ More info: ${CAMPAIGN_LINK}
     const gap = 22;
     const headerH = 92;
     const footerH = 112;
-    const labelH = 96;
+    const labelH = 118;
 
     const cw = pad*2 + cell*PUZZLES.length + gap*(PUZZLES.length-1);
     const ch = headerH + cell + labelH + footerH;
@@ -660,13 +673,19 @@ More info: ${CAMPAIGN_LINK}
       cctx.fillStyle = '#22392c';
       cctx.font = '600 19px Georgia, serif';
       cctx.textAlign = 'center';
-      cctx.fillText(puzzle.title, x + cell/2, y + cell + 30);
+      // wrap the (now name-personalised, so variable-length) title instead
+      // of assuming it always fits on one line
+      const titleLines = wrapLines(cctx, personalize(puzzle.title), cell - 10).slice(0,2);
+      titleLines.forEach((line, li) => {
+        cctx.fillText(line, x + cell/2, y + cell + 30 + li*22);
+      });
 
       cctx.fillStyle = '#5c6b5e';
       cctx.font = 'italic 14px Georgia, serif';
-      const lines = wrapLines(cctx, '“' + puzzle.quote + '”', cell - 10);
+      const quoteTop = y + cell + 30 + titleLines.length*22 + 12;
+      const lines = wrapLines(cctx, '“' + personalize(puzzle.quote) + '”', cell - 10);
       lines.slice(0,3).forEach((line, li) => {
-        cctx.fillText(line, x + cell/2, y + cell + 52 + li*18);
+        cctx.fillText(line, x + cell/2, quoteTop + li*18);
       });
     }
 
@@ -691,14 +710,26 @@ More info: ${CAMPAIGN_LINK}
   function finishPuzzle(){
     const puzzle = PUZZLES[puzzleIndex];
     const isLast = puzzleIndex === PUZZLES.length - 1;
-    ovTitle.textContent = puzzle.title;
-    ovQuote.textContent = '“' + puzzle.quote + '”';
+    ovTitle.textContent = personalize(puzzle.title);
+    ovQuote.textContent = '“' + personalize(puzzle.quote) + '”';
     ovBtn.style.display = isLast ? 'none' : 'block';
     ovBtn.textContent = 'Next';
     shareBlock.style.display = isLast ? 'block' : 'none';
 
     if(isLast){
-      captionBox.textContent = buildCaption(playerName);
+      const safeName = playerName.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      shareNote.innerHTML =
+        `<p>${safeName}, did you know SMU School of Computing and Information Systems just launched a fund to give undergraduates the gift of quality education, from teachers like you?</p>` +
+        `<p>I'd love for more people to join this cause. If you're up for it, share the message below on LinkedIn.</p>` +
+        `<p>Here's how:</p>`;
+
+      const caption = buildCaption(playerName);
+      captionBox.textContent = caption;
+      // Copy it automatically as soon as this screen appears, so it's
+      // already on the clipboard even before they tap the Copy button.
+      copyText(caption).then(ok => {
+        if(ok) showToast('Message copied — paste it into your post');
+      });
       // give the last snapshot a moment to be captured before collaging
       setTimeout(async () => {
         const collageUrl = await buildCollage();
@@ -724,81 +755,84 @@ More info: ${CAMPAIGN_LINK}
     setTimeout(() => toast.classList.remove('show'), 2400);
   }
 
-  copyBtn.addEventListener('click', async () => {
+  // Tries the modern clipboard API first, then falls back to the old
+  // select-and-execCommand trick — some in-app browsers (LinkedIn's own,
+  // or Safari right after a share sheet closes) refuse the first one.
+  async function copyText(text){
     try{
-      await navigator.clipboard.writeText(buildCaption(playerName));
-      showToast('Message copied — paste it into your post');
+      await navigator.clipboard.writeText(text);
+      return true;
+    }catch(e){ /* fall through */ }
+    try{
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      const ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      return ok;
     }catch(e){
-      showToast('Select the text above and copy it manually');
+      return false;
+    }
+  }
+
+  copyBtn.addEventListener('click', async () => {
+    const ok = await copyText(buildCaption(playerName));
+    if(ok){
+      showToast('Message copied — paste it into your post');
+    }else{
+      showToast('Couldn’t auto-copy — select the text above and copy it');
     }
   });
 
-  saveBtn.addEventListener('click', async () => {
+  // Shared by both buttons below. Handing the image to the OS share sheet
+  // (rather than a bare download link) is what actually gets LinkedIn to
+  // open its own "create a post" screen with the photo already attached —
+  // LinkedIn's link-preview URL scheme doesn't reliably start a post, it
+  // just opens the app. The same sheet also offers "Save Image" straight
+  // to Photos on iPhone, so it covers the save-only case too.
+  async function shareImageFile(){
     if(!collageDataUrl){
       showToast('Still preparing your picture — try again in a second');
-      return;
+      return false;
     }
     const file = dataUrlToFile(collageDataUrl, 'connect-the-dots.png');
 
-    // Prefer the native share sheet with a file attached — on iPhone this
-    // gives a proper "Save Image" action that lands in Photos, not Files.
     if(navigator.canShare && navigator.canShare({ files: [file] })){
       try{
-        await navigator.share({ files: [file] });
-        return;
+        await navigator.share({ files: [file], title: 'Happy Teachers Day' });
+        return true;
       }catch(e){
-        // user cancelled the share sheet, or it failed — fall through
-        if(e && e.name === 'AbortError') return;
+        if(e && e.name === 'AbortError') return false; // user cancelled
+        // fall through to the tab fallback below
       }
     }
 
     // Fallback: open the image in its own tab instead of navigating the
     // app away from itself (iOS Safari ignores the `download` attribute
     // on data URIs and instead replaces the current page, which breaks
-    // the game). A long-press on the opened image lets them save it.
+    // the game). A long-press on the opened image lets them save or share it.
     const win = window.open();
     if(win){
       win.document.write('<title>Your Connect the Dots picture</title><body style="margin:0;background:#111;display:flex;align-items:center;justify-content:center;min-height:100vh;"><img src="' + collageDataUrl + '" style="max-width:100%;height:auto;" alt="Your three completed drawings"></body>');
-      showToast('Opened your picture — press and hold it to save');
+      showToast('Opened your picture — press and hold it to save or share');
     }else{
-      showToast('Allow pop-ups, then try Save image again');
+      showToast('Allow pop-ups, then try again');
     }
-  });
+    return false;
+  }
 
-  shareBtn.addEventListener('click', () => {
-    const caption = buildCaption(playerName);
-    const webShareUrl = 'https://www.linkedin.com/sharing/share-offsite/?url=' + encodeURIComponent(CAMPAIGN_LINK);
-    // LinkedIn's own (undocumented but widely used) app URL scheme — when
-    // the app is installed, navigating to this switches straight to it
-    // instead of surfacing the OS's general "share to any app" sheet.
-    const appShareUrl = 'linkedin://sharing/share-offsite/?url=' + encodeURIComponent(CAMPAIGN_LINK);
+  saveBtn.addEventListener('click', () => { shareImageFile(); });
 
-    // Fire the navigation FIRST, synchronously within this click's own
-    // user gesture — waiting on an async clipboard write before this can
-    // cause iOS to treat the gesture as stale (this is why the button
-    // could seem to "stop working" after other taps happened first).
-    let appOpened = false;
-    const onHide = () => { if(document.hidden) appOpened = true; };
-    document.addEventListener('visibilitychange', onHide);
-
-    window.location.href = appShareUrl;
-
-    setTimeout(() => {
-      document.removeEventListener('visibilitychange', onHide);
-      if(!appOpened){
-        // the app scheme did nothing — LinkedIn isn't installed, so fall
-        // back to the normal web share link instead
-        window.location.href = webShareUrl;
-      }
-    }, 900);
-
-    // Copy the caption in the background — doesn't need to block the
-    // navigation above, and still completes with plenty of time to spare.
-    navigator.clipboard.writeText(caption).then(() => {
-      showToast('Message copied — opening LinkedIn…');
-    }).catch(() => {
-      showToast('Opening LinkedIn — paste your copied message there');
-    });
+  shareBtn.addEventListener('click', async () => {
+    const shared = await shareImageFile();
+    if(shared){
+      showToast('Pick LinkedIn from the list, then paste your copied message in');
+    }
   });
 
   function refreshNameBtn(){
