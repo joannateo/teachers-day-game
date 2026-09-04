@@ -259,11 +259,13 @@
     color:#f4ede2;
     border:1px solid rgba(244,237,226,0.35);
     font-size:13.5px;
+    font-family:inherit;
     padding:10px;
     margin-bottom:18px;
     text-decoration:none;
     display:block;
     text-align:center;
+    cursor:pointer;
   }
   .share-btn{
     background:#0a66c2;
@@ -352,7 +354,7 @@
 
         <div class="share-label">Your three drawings</div>
         <img class="collage-preview" id="collageImg" alt="Your three completed drawings">
-        <a class="save-btn" id="saveBtn" download="connect-the-dots.png">Save image</a>
+        <button class="save-btn" id="saveBtn" type="button">Save image</button>
 
         <button class="share-btn" id="shareBtn">
           <svg viewBox="0 0 24 24"><path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.03-1.85-3.03-1.85 0-2.14 1.45-2.14 2.94v5.66H9.34V9h3.41v1.56h.05c.48-.9 1.64-1.85 3.38-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.07 2.07 0 1 1 0-4.13 2.07 2.07 0 0 1 0 4.13zM7.12 20.45H3.56V9h3.56v11.45z"/></svg>
@@ -387,7 +389,17 @@
   const captionBox = document.getElementById('captionBox');
   const collageImg = document.getElementById('collageImg');
   const saveBtn = document.getElementById('saveBtn');
+  let collageDataUrl = null;
   const toast = document.getElementById('toast');
+
+  function dataUrlToFile(dataUrl, filename){
+    const parts = dataUrl.split(',');
+    const mime = parts[0].match(/:(.*?);/)[1];
+    const bin = atob(parts[1]);
+    const arr = new Uint8Array(bin.length);
+    for(let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+    return new File([arr], filename, { type: mime });
+  }
   const nameOverlay = document.getElementById('nameOverlay');
   const nameInput = document.getElementById('nameInput');
   const nameBtn = document.getElementById('nameBtn');
@@ -406,8 +418,8 @@
   // template freely, everything else stays the same for every player.
   function buildCaption(name){
     const opener = name
-      ? `A student once told me, "${name}, you're an awesome teacher." I laughed it off. Turns out they weren't wrong.`
-      : `A student once told me I'm an awesome teacher. I laughed it off. Turns out they weren't wrong.`;
+      ? `A student once told me, "${name}, you're an actually awesome teacher." I laughed it off. Turns out they weren't wrong.`
+      : `A student once told me I'm an actually awesome teacher. I laughed it off. Turns out they weren't wrong.`;
 
     return `${opener}
 
@@ -477,7 +489,15 @@ More info: ${CAMPAIGN_LINK}
     canvas.width = W*DPR; canvas.height = H*DPR;
     ctx.setTransform(DPR,0,0,DPR,0,0);
   }
-  window.addEventListener('resize', () => { resize(); layoutLabels(); draw(); });
+  window.addEventListener('resize', () => {
+    resize();
+    // a resize can fire before any puzzle has loaded (e.g. the mobile
+    // browser's chrome shrinking/growing while the name screen is up,
+    // or after the share sheet closes) — pts/connected aren't set yet.
+    if(!pts) return;
+    layoutLabels();
+    draw();
+  });
 
   function toPixel(p){
     return { x: (p.x/100)*W, y:(p.y/100)*H };
@@ -683,7 +703,7 @@ More info: ${CAMPAIGN_LINK}
       setTimeout(async () => {
         const collageUrl = await buildCollage();
         collageImg.src = collageUrl;
-        saveBtn.href = collageUrl;
+        collageDataUrl = collageUrl;
       }, 60);
     }
 
@@ -713,7 +733,39 @@ More info: ${CAMPAIGN_LINK}
     }
   });
 
-  shareBtn.addEventListener('click', async () => {
+  saveBtn.addEventListener('click', async () => {
+    if(!collageDataUrl){
+      showToast('Still preparing your picture — try again in a second');
+      return;
+    }
+    const file = dataUrlToFile(collageDataUrl, 'connect-the-dots.png');
+
+    // Prefer the native share sheet with a file attached — on iPhone this
+    // gives a proper "Save Image" action that lands in Photos, not Files.
+    if(navigator.canShare && navigator.canShare({ files: [file] })){
+      try{
+        await navigator.share({ files: [file] });
+        return;
+      }catch(e){
+        // user cancelled the share sheet, or it failed — fall through
+        if(e && e.name === 'AbortError') return;
+      }
+    }
+
+    // Fallback: open the image in its own tab instead of navigating the
+    // app away from itself (iOS Safari ignores the `download` attribute
+    // on data URIs and instead replaces the current page, which breaks
+    // the game). A long-press on the opened image lets them save it.
+    const win = window.open();
+    if(win){
+      win.document.write('<title>Your Connect the Dots picture</title><body style="margin:0;background:#111;display:flex;align-items:center;justify-content:center;min-height:100vh;"><img src="' + collageDataUrl + '" style="max-width:100%;height:auto;" alt="Your three completed drawings"></body>');
+      showToast('Opened your picture — press and hold it to save');
+    }else{
+      showToast('Allow pop-ups, then try Save image again');
+    }
+  });
+
+  shareBtn.addEventListener('click', () => {
     const caption = buildCaption(playerName);
     const webShareUrl = 'https://www.linkedin.com/sharing/share-offsite/?url=' + encodeURIComponent(CAMPAIGN_LINK);
     // LinkedIn's own (undocumented but widely used) app URL scheme — when
@@ -721,15 +773,10 @@ More info: ${CAMPAIGN_LINK}
     // instead of surfacing the OS's general "share to any app" sheet.
     const appShareUrl = 'linkedin://sharing/share-offsite/?url=' + encodeURIComponent(CAMPAIGN_LINK);
 
-    try{
-      await navigator.clipboard.writeText(caption);
-      showToast('Message copied — opening LinkedIn…');
-    }catch(e){
-      showToast('Opening LinkedIn — paste your copied message there');
-    }
-
-    // Detect whether the app actually took over (the tab goes to the
-    // background the moment iOS/Android hands off to it).
+    // Fire the navigation FIRST, synchronously within this click's own
+    // user gesture — waiting on an async clipboard write before this can
+    // cause iOS to treat the gesture as stale (this is why the button
+    // could seem to "stop working" after other taps happened first).
     let appOpened = false;
     const onHide = () => { if(document.hidden) appOpened = true; };
     document.addEventListener('visibilitychange', onHide);
@@ -744,6 +791,14 @@ More info: ${CAMPAIGN_LINK}
         window.location.href = webShareUrl;
       }
     }, 900);
+
+    // Copy the caption in the background — doesn't need to block the
+    // navigation above, and still completes with plenty of time to spare.
+    navigator.clipboard.writeText(caption).then(() => {
+      showToast('Message copied — opening LinkedIn…');
+    }).catch(() => {
+      showToast('Opening LinkedIn — paste your copied message there');
+    });
   });
 
   function refreshNameBtn(){
