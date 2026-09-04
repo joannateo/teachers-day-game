@@ -360,17 +360,18 @@
 
         <div class="share-label">Your three drawings</div>
         <img class="collage-preview" id="collageImg" alt="Your three completed drawings">
-        <button class="save-btn" id="saveBtn" type="button">Save image</button>
+        <button class="save-btn" id="saveBtn" type="button">Save picture to your phone</button>
+        <p class="share-hint">Posting on LinkedIn? Save the picture above, then start a new LinkedIn post yourself and attach it from your camera roll </p>
 
         <div class="share-label">Your message</div>
         <div class="caption-box" id="captionBox"></div>
-        <button class="copy-btn" id="copyBtn">Copy message &mdash; paste into your post</button>
+        <button class="copy-btn" id="copyBtn">Copy message and paste into your post</button>
 
         <button class="share-btn" id="shareBtn" type="button">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.6" y1="10.5" x2="15.4" y2="6.5"></line><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"></line></svg>
           Share to your social platforms
         </button>
-        <p class="share-hint">Pick where you'd like to post — your picture will already be attached, ready to go.</p>
+        <p class="share-hint">For WhatsApp, Instagram, Mail and others, pick one from the phone menu. </p>
       </div>
     </div>
   </div>
@@ -729,7 +730,7 @@ More info: ${CAMPAIGN_LINK}
       const safeName = playerName.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
       shareNote.innerHTML =
         `<p>${safeName}, did you know SMU School of Computing and Information Systems just launched a fund to give undergraduates the gift of quality education, from teachers like you?</p>` +
-        `<p>I'd love for more people to join this cause. If you're up for it, share the message below on LinkedIn or any other platforms.</p>` +
+        `<p>I'd love for more people to join this cause. If you're up for it, share the message below on your socials.</p>` +
         `<p>Here's how:</p>`;
 
       const caption = buildCaption(playerName);
@@ -799,25 +800,38 @@ More info: ${CAMPAIGN_LINK}
   });
 
   // Shared by both buttons below. Handing the image to the OS share sheet
-  // (rather than a bare download link) is what actually gets LinkedIn to
-  // open its own "create a post" screen with the photo already attached —
-  // LinkedIn's link-preview URL scheme doesn't reliably start a post, it
-  // just opens the app. The same sheet also offers "Save Image" straight
-  // to Photos on iPhone, so it covers the save-only case too.
-  async function shareImageFile(){
+  // (rather than a bare download link) is what lets apps that accept
+  // shared photos — WhatsApp, Instagram, Mail, Messages — open with the
+  // picture already attached. The same sheet also offers "Save Image"
+  // straight to Photos on iPhone, so it covers the save-only case too.
+  // Where an app is willing to take a caption alongside the photo, we hand
+  // it over as well — best-effort, since not every app on the receiving
+  // end uses it (LinkedIn's app in particular ignores both).
+  async function shareImageFile(text){
     if(!collageDataUrl){
       showToast('Still preparing your picture — try again in a second');
       return false;
     }
     const file = dataUrlToFile(collageDataUrl, 'connect-the-dots.png');
+    const shareData = { files: [file], title: 'Happy Teachers Day' };
+    if(text) shareData.text = text;
 
-    if(navigator.canShare && navigator.canShare({ files: [file] })){
+    if(navigator.canShare && navigator.canShare(shareData)){
       try{
-        await navigator.share({ files: [file], title: 'Happy Teachers Day' });
+        await navigator.share(shareData);
         return true;
       }catch(e){
         if(e && e.name === 'AbortError') return false; // user cancelled
         // fall through to the tab fallback below
+      }
+    }else if(navigator.canShare && navigator.canShare({ files: [file] })){
+      // some browsers accept files but reject the combination with text —
+      // still share the photo rather than give up on it entirely
+      try{
+        await navigator.share({ files: [file], title: 'Happy Teachers Day' });
+        return true;
+      }catch(e){
+        if(e && e.name === 'AbortError') return false;
       }
     }
 
@@ -838,9 +852,9 @@ More info: ${CAMPAIGN_LINK}
   saveBtn.addEventListener('click', () => { shareImageFile(); });
 
   shareBtn.addEventListener('click', async () => {
-    const shared = await shareImageFile();
+    const shared = await shareImageFile(buildCaption(playerName));
     if(shared){
-      showToast('Pick where to post, then paste your copied message in');
+      showToast('If your message didn’t carry over, just paste it in');
     }
   });
 
